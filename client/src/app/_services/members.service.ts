@@ -18,14 +18,14 @@ export class MembersService {
 
   getMembers(userParams: UserParams) {
     let params = this.getPaginationHeaders(userParams.pageNumber, userParams.pageSize);
-    params.append('minAge', userParams.minAge.toString());
-    params.append('maxAge', userParams.maxAge.toString());
-    params.append('gender', userParams.gender.toString());
+    params = params.append('minAge', userParams.minAge.toString());
+    params = params.append('maxAge', userParams.maxAge.toString());
+    params = params.append('gender', userParams.gender.toString());
 
     return this.getPaginatedResult<Member[]>(this.baseUrl + 'users', params);
   }
 
-  private getPaginatedResult<T>(url ,params: HttpParams) {
+  private getPaginatedResult<T>(url: string, params: HttpParams) {
     let paginatedResult: PaginatedResult<T> = new PaginatedResult<T>();
 
     return this.http.get<T>(url, { observe: 'response', params }).pipe(
