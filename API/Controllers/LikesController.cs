@@ -6,6 +6,7 @@ using API.Data;
 using API.DTOs;
 using API.Entities;
 using API.Extensions;
+using API.Helpers;
 using API.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -53,11 +54,15 @@ namespace API.Controllers
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<LikeDto>>> GetUsersLikes(string predicate)
+    public async Task<ActionResult<PagedList<LikeDto>>> GetUsersLikes([FromQuery]LikesParams likesParams)
     {
-        if(predicate == null) return BadRequest("Predicate is not set");
-        
-        var users = await _likesRepository.GetUserLikes(predicate, User.GetUserId());
+        if(likesParams.Predicate == null) return BadRequest("Predicate is not set");
+
+        likesParams.UserId = User.GetUserId();
+        var users = await _likesRepository.GetUserLikes(likesParams);
+
+        Response.AddPaginationHeader(users.CurrentPage, users.PageSize,
+           users.TotalCount, users.TotalPages);
 
         return Ok(users);
     }
