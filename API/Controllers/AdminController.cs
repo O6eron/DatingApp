@@ -1,4 +1,8 @@
+using API.DTOs;
 using API.Entities;
+using API.Extensions;
+using API.Helpers;
+using API.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -9,10 +13,12 @@ namespace API.Controllers
     public class AdminController : BaseApiController
     {
         private readonly UserManager<AppUser> _userManager;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public AdminController(UserManager<AppUser> userManager)
+        public AdminController(UserManager<AppUser> userManager, IUnitOfWork unitOfWork)
         {
             _userManager = userManager;
+            _unitOfWork = unitOfWork;
         }
 
         [Authorize(Policy = "RequireAdminRole")]
@@ -58,9 +64,57 @@ namespace API.Controllers
 
         [Authorize(Policy = "ModeratePhotoRole")]
         [HttpGet("photos-to-moderate")]
-        public ActionResult GetPhotosForModeration()
+        public async Task<ActionResult<PagedList<PhotoDto>>> GetPhotosForModeration()
         {
-            return Ok("Admins or moderators can see this");
+            var photos = await _unitOfWork.PhotoRepository.GetUnapprovedPhotosAsync();
+
+            Response.AddPaginationHeader(photos.CurrentPage, photos.PageSize, photos.TotalCount, photos.TotalPages);
+
+            return photos;
+        }
+
+        [Authorize(Policy = "ModeratePhotoRole")]
+        [HttpPost("approve-photo/{photoId}")]
+        public async Task<ActionResult<PagedList<PhotoDto>>> ApprovePhoto(int photoId)
+        {
+            var photoToApprove = await _unitOfWork.PhotoRepository.GetPhotoById(photoId);
+
+            if (photoToApprove == null) return NotFound("Photo not found");
+
+            photoToApprove.IsApproved = true;
+
+            var user = await _unitOfWork.UserRepository.GetUserByIdAsync(photoToApprove.AppUserId);
+
+            photoToApprove.IsMain = !user.Photos.Any(p => p.IsMain);
+
+            if (!(await _unitOfWork.Complete())) return BadRequest("Failed to approve photo");
+
+            var photos = await _unitOfWork.PhotoRepository.GetUnapprovedPhotosAsync();
+
+            Response.AddPaginationHeader(photos.CurrentPage, photos.PageSize, photos.TotalCount, photos.TotalPages);
+
+            return photos;
+        }
+
+        [Authorize(Policy = "ModeratePhotoRole")]
+        [HttpPost("reject-photo/{photoId}")]
+        public async Task<ActionResult<PagedList<PhotoDto>>> RejectPhoto(int photoId)
+        {
+            var photoToRemove = await _unitOfWork.PhotoRepository.GetPhotoById(photoId);
+
+            if (photoToRemove == null) return NotFound("Photo not found");
+
+            if (photoToRemove.IsMain) return BadRequest("Cannot remove main photo");
+
+            _unitOfWork.PhotoRepository.RemovePhoto(photoToRemove);
+
+            if (!(await _unitOfWork.Complete())) return BadRequest("Failed to remove photo");
+
+            var photos = await _unitOfWork.PhotoRepository.GetUnapprovedPhotosAsync();
+
+            Response.AddPaginationHeader(photos.CurrentPage, photos.PageSize, photos.TotalCount, photos.TotalPages);
+
+            return photos;
         }
     }
 }

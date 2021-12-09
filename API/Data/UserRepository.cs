@@ -33,7 +33,9 @@ namespace API.Data
 
     public async Task<PagedList<MemberDto>> GetMembersAsync(UserParams userParams)
     {
-      var query = _context.Users.AsQueryable();
+      var query = _context.Users
+        .Include(u => u.Photos.Where(p => p.IsApproved))
+        .AsQueryable();
 
       query = query.Where(u => u.UserName != userParams.CurrentUserName);
       query = query.Where(u => u.Gender == userParams.Gender);
@@ -55,7 +57,7 @@ namespace API.Data
 
     public async Task<AppUser> GetUserByIdAsync(int id)
     {
-      return await _context.Users.FindAsync(id);
+      return await _context.Users.Include(p => p.Photos).SingleOrDefaultAsync(u => u.Id == id);
     }
 
     public async Task<AppUser> GetUserByUsernameAsync(string username)

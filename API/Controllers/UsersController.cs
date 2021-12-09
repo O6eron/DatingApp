@@ -34,6 +34,11 @@ namespace API.Controllers
 
         var users = await _unitOfWork.UserRepository.GetMembersAsync(userParams);
 
+        users.ForEach(user =>
+        {
+          user.Photos = user.Photos.Where(p => p.IsApproved).ToList();
+        });
+
         Response.AddPaginationHeader(users.CurrentPage, users.PageSize, users.TotalCount, users.TotalPages);
 
         return Ok(users);
@@ -42,7 +47,13 @@ namespace API.Controllers
     [HttpGet("{username}", Name = "GetUser")]
     public async Task<ActionResult<MemberDto>> GetUser(string username)
     {
-        return await _unitOfWork.UserRepository.GetMemberAsync(username);
+        var currentUserName = User.GetUsername();
+        var user = await _unitOfWork.UserRepository.GetMemberAsync(username);
+
+        if (user.Username != currentUserName) {
+          user.Photos = user.Photos.Where(p => p.IsApproved).ToList();
+        }
+        return user;
     }
 
     [HttpPut]
