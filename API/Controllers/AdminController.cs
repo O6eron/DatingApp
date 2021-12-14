@@ -64,18 +64,16 @@ namespace API.Controllers
 
         [Authorize(Policy = "ModeratePhotoRole")]
         [HttpGet("photos-to-moderate")]
-        public async Task<ActionResult<PagedList<PhotoDto>>> GetPhotosForModeration()
+        public async Task<ActionResult<PhotoDto[]>> GetPhotosForModeration()
         {
             var photos = await _unitOfWork.PhotoRepository.GetUnapprovedPhotosAsync();
-
-            Response.AddPaginationHeader(photos.CurrentPage, photos.PageSize, photos.TotalCount, photos.TotalPages);
 
             return photos;
         }
 
         [Authorize(Policy = "ModeratePhotoRole")]
         [HttpPost("approve-photo/{photoId}")]
-        public async Task<ActionResult<PagedList<PhotoDto>>> ApprovePhoto(int photoId)
+        public async Task<ActionResult<PhotoDto[]>> ApprovePhoto(int photoId)
         {
             var photoToApprove = await _unitOfWork.PhotoRepository.GetPhotoById(photoId);
 
@@ -91,14 +89,12 @@ namespace API.Controllers
 
             var photos = await _unitOfWork.PhotoRepository.GetUnapprovedPhotosAsync();
 
-            Response.AddPaginationHeader(photos.CurrentPage, photos.PageSize, photos.TotalCount, photos.TotalPages);
-
             return photos;
         }
 
         [Authorize(Policy = "ModeratePhotoRole")]
         [HttpPost("reject-photo/{photoId}")]
-        public async Task<ActionResult<PagedList<PhotoDto>>> RejectPhoto(int photoId)
+        public async Task<ActionResult<PhotoDto[]>> RejectPhoto(int photoId)
         {
             var photoToRemove = await _unitOfWork.PhotoRepository.GetPhotoById(photoId);
 
@@ -111,8 +107,6 @@ namespace API.Controllers
             if (!(await _unitOfWork.Complete())) return BadRequest("Failed to remove photo");
 
             var photos = await _unitOfWork.PhotoRepository.GetUnapprovedPhotosAsync();
-
-            Response.AddPaginationHeader(photos.CurrentPage, photos.PageSize, photos.TotalCount, photos.TotalPages);
 
             return photos;
         }

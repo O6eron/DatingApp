@@ -8,6 +8,7 @@ using API.Helpers;
 using API.Interfaces;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace API.Data
 {
@@ -27,11 +28,9 @@ namespace API.Data
       return await _context.Photos.FindAsync(photoId);
     }
 
-    public async Task<PagedList<PhotoDto>> GetUnapprovedPhotosAsync()
+    public async Task<PhotoDto[]> GetUnapprovedPhotosAsync()
     {
-      var query = _context.Photos.Where(p => !p.IsApproved);
-
-      var paginationParams = new PaginationParams();
+      var query = _context.Photos.Include(x => x.AppUser).Where(p => !p.IsApproved);
 
       var photos = query.Select( photo => new PhotoDto
       {
@@ -42,7 +41,8 @@ namespace API.Data
           KnownAs = photo.AppUser.KnownAs
       });
 
-      return await PagedList<PhotoDto>.CreateAsync(photos, paginationParams.PageNumber, paginationParams.PageSize);
+
+      return _mapper.Map<PhotoDto[]>(await query.ToListAsync());
     }
 
     public void RemovePhoto(Photo photo)

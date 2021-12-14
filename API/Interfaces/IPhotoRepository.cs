@@ -11,7 +11,7 @@ namespace API.Interfaces
 {
     public interface IPhotoRepository
     {
-        Task<PagedList<PhotoDto>> GetUnapprovedPhotosAsync();
+        Task<PhotoDto[]> GetUnapprovedPhotosAsync();
         Task<Photo> GetPhotoById(int photoId);
         void RemovePhoto(Photo photo);
     }
